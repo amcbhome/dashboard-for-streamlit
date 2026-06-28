@@ -357,4 +357,5 @@ with chart_row_2_right:
         yaxis=dict(title=dict(font=dict(weight="bold")), tickfont=dict(weight="bold")),
         **bold_font_style
     )
-    fig_channels.update_
+    fig_channels.update_traces(textfont=dict(weight="bold"))
+    st.plotly_chart(fig_channels, use_container_width=True)
