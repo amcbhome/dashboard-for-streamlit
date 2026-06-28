@@ -43,7 +43,7 @@ st.markdown("""
         color: #57606a !important;
         font-family: 'Inter', sans-serif !important;
         font-size: 14px !important;
-        font-weight: 700 !important; /* Bolded Label */
+        font-weight: 700 !important;
         text-transform: uppercase;
         letter-spacing: 0.5px;
     }
@@ -78,7 +78,6 @@ st.markdown("""
         font-size: 16px;
     }
     
-    /* Adjust dividers for light mode */
     hr {
         border-color: #d0d7de !important;
     }
@@ -100,7 +99,7 @@ def generate_synthetic_data():
     mrr_growth = np.random.normal(loc=450, scale=300, size=365).cumsum()
     mrr = base_mrr + mrr_growth
     
-    # Active Users (slight upward trend with weekend drops)
+    # Active Users
     base_dau = 15000
     dau_trend = np.sin(np.array(range(365)) * (2 * np.pi / 7)) * 1200  
     dau_growth = np.random.normal(loc=15, scale=50, size=365).cumsum()
@@ -117,7 +116,6 @@ def generate_synthetic_data():
         p=[0.35, 0.30, 0.15, 0.10, 0.10]
     )
     
-    # Assemble into DataFrames
     df_daily = pd.DataFrame({
         'Date': dates,
         'MRR': mrr,
@@ -126,7 +124,6 @@ def generate_synthetic_data():
         'AcquisitionChannel': channels
     })
     
-    # Derived subscription tier metrics
     df_customers = pd.DataFrame({
         'CustomerID': [f"C-{i:05d}" for i in range(1, 1501)],
         'Plan': np.random.choice(['Starter', 'Growth', 'Enterprise'], size=1500, p=[0.50, 0.35, 0.15]),
@@ -147,7 +144,6 @@ with st.sidebar:
     st.title("Apex Workspace")
     st.subheader("Global Filters")
     
-    # Date Slider filter
     min_date = df_daily['Date'].min()
     max_date = df_daily['Date'].max()
     
@@ -158,7 +154,6 @@ with st.sidebar:
         max_value=max_date
     )
     
-    # Multi-select region filter
     regions = df_customers['Region'].unique().tolist()
     selected_regions = st.multiselect("Target Regions", options=regions, default=regions)
     
@@ -185,10 +180,8 @@ filtered_customers = df_customers[df_customers['Region'].isin(selected_regions)]
 st.markdown("<h1 class='main-title'>Apex Executive SaaS Dashboard</h1>", unsafe_allow_html=True)
 st.markdown("<p class='sub-title'>Real-time operations, customer distribution, and historical health index</p>", unsafe_allow_html=True)
 
-# Performance Cards Row
 kpi1, kpi2, kpi3, kpi4 = st.columns(4)
 
-# Calculate status KPIs based on current filtered datasets
 current_mrr = filtered_daily['MRR'].iloc[-1]
 previous_mrr = filtered_daily['MRR'].iloc[0]
 mrr_delta = ((current_mrr - previous_mrr) / previous_mrr) * 100
@@ -203,7 +196,7 @@ avg_conversion = filtered_daily['ConversionRate'].mean()
 with kpi1:
     st.metric(
         label="Monthly Recurring Revenue (MRR)",
-        value=f"${current_mrr:,.2f}",
+        value=f"£{int(round(current_mrr)):,}",
         delta=f"{mrr_delta:+.2f}% vs Period Start"
     )
 
@@ -231,14 +224,14 @@ with kpi4:
 
 st.write("") # Spacer
 
-# Common layout styling object for bolder chart labels
+# Common text styles to override defaults and prevent "undefined" titles
 bold_font_style = dict(
     font=dict(family="Inter, sans-serif", size=12, color="#24292f"),
-    title=dict(font=dict(size=14, family="Inter, sans-serif", weight="bold"))
+    title=dict(text="")  # Explicitly kills the global chart title container placeholder
 )
 
 # ---------------------------------------------------------
-# DATA VISUALIZATIONS SECTION
+# DATA VISUALIZATIONS SECTION (ONE SCREEN ROW)
 # ---------------------------------------------------------
 chart_row_1_left, chart_row_1_right = st.columns([2, 1])
 
@@ -270,8 +263,8 @@ with chart_row_1_left:
         plot_bgcolor='rgba(0,0,0,0)',
         margin=dict(l=0, r=0, t=10, b=0),
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1, font=dict(weight="bold")),
-        xaxis=dict(showgrid=True, gridcolor='#d0d7de', title=dict(font=dict(weight="bold")), tickfont=dict(weight="bold")),
-        yaxis=dict(showgrid=True, gridcolor='#d0d7de', tickprefix="$", title=dict(font=dict(weight="bold")), tickfont=dict(weight="bold")),
+        xaxis=dict(showgrid=True, gridcolor='#d0d7de', tickfont=dict(weight="bold"), title=dict(text="")),
+        yaxis=dict(showgrid=True, gridcolor='#d0d7de', tickprefix="£", tickformat=",.0f", tickfont=dict(weight="bold"), title=dict(text="")),
         **bold_font_style
     )
     st.plotly_chart(fig_growth, use_container_width=True)
@@ -298,64 +291,3 @@ with chart_row_1_right:
     )
     fig_tiers.update_traces(textfont=dict(weight="bold"))
     st.plotly_chart(fig_tiers, use_container_width=True)
-
-
-st.divider()
-
-chart_row_2_left, chart_row_2_right = st.columns([1, 1])
-
-with chart_row_2_left:
-    st.subheader("Regional Performance Index")
-    
-    region_data = filtered_customers.groupby('Region').agg(
-        Total_Spend=('Spend', 'sum'),
-        Customer_Count=('CustomerID', 'count')
-    ).reset_index()
-    
-    fig_regions = px.bar(
-        region_data,
-        x='Region',
-        y='Total_Spend',
-        text='Customer_Count',
-        labels={'Total_Spend': 'Revenue ($)', 'Customer_Count': 'Customers'},
-        color='Region',
-        color_discrete_sequence=px.colors.sequential.Sol
-    )
-    
-    fig_regions.update_traces(texttemplate='%{text} Clients', textposition='outside', textfont=dict(weight="bold"))
-    fig_regions.update_layout(
-        paper_bgcolor='rgba(0,0,0,0)',
-        plot_bgcolor='rgba(0,0,0,0)',
-        showlegend=False,
-        margin=dict(l=0, r=0, t=20, b=0),
-        xaxis=dict(showgrid=False, title=dict(font=dict(weight="bold")), tickfont=dict(weight="bold")),
-        yaxis=dict(showgrid=True, gridcolor='#d0d7de', tickprefix="$", title=dict(font=dict(weight="bold")), tickfont=dict(weight="bold")),
-        **bold_font_style
-    )
-    st.plotly_chart(fig_regions, use_container_width=True)
-
-with chart_row_2_right:
-    st.subheader("Acquisition Pipeline Funnel")
-    
-    channels_df = filtered_daily['AcquisitionChannel'].value_counts().reset_index()
-    channels_df.columns = ['Channel', 'Attributions']
-    
-    fig_channels = px.funnel(
-        channels_df,
-        y='Channel',
-        x='Attributions',
-        color='Channel',
-        color_discrete_sequence=px.colors.qualitative.Safe
-    )
-    
-    fig_channels.update_layout(
-        paper_bgcolor='rgba(0,0,0,0)',
-        plot_bgcolor='rgba(0,0,0,0)',
-        showlegend=False,
-        margin=dict(l=0, r=0, t=20, b=0),
-        xaxis=dict(title=dict(font=dict(weight="bold")), tickfont=dict(weight="bold")),
-        yaxis=dict(title=dict(font=dict(weight="bold")), tickfont=dict(weight="bold")),
-        **bold_font_style
-    )
-    fig_channels.update_traces(textfont=dict(weight="bold"))
-    st.plotly_chart(fig_channels, use_container_width=True)
